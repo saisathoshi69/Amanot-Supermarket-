@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shop Manager Pro</title>
+
+<style>
+  body {
+    font-family: Arial;
+    background: #0f2027;
+    color: white;
+    text-align: center;
+    padding: 15px;
+  }
+
+  input, select {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+  }
+
+  button {
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 20px;
+    border: none;
+    background: #00c6ff;
+    color: black;
+    cursor: pointer;
+  }
+
+  table {
+    width: 100%;
+    margin-top: 15px;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 8px;
+    border-bottom: 1px solid #444;
+  }
+
+  .summary {
+    margin: 10px 0;
+    font-size: 18px;
+    color: #00c6ff;
+  }
+</style>
+</head>
+
+<body>
+
+<h1>🛒 Shop Manager Pro</h1>
+
+<h3 id="todayDate"></h3>
+
+<hr>
+
+<!-- 🛒 PRODUCTS -->
+<h2>🛒 Products</h2>
+
+<input id="name" placeholder="Product">
+<input id="price" type="number" placeholder="Price">
+
+<input id="qty" type="number" placeholder="Qty">
+
+<!-- GRAM OPTION INSIDE PRODUCTS -->
+<select id="unit">
+  <option value="qty">Qty</option>
+  <option value="100g">100 gm</option>
+  <option value="200g">200 gm</option>
+  <option value="500g">500 gm</option>
+  <option value="1kg">1 kg</option>
+</select>
+
+<select id="payment">
+  <option value="Cash">Cash</option>
+  <option value="bKash">bKash</option>
+</select>
+
+<button onclick="addItem()">Add Item</button>
+
+<div class="summary" id="shopTotal">Shop Total: 0</div>
+
+<table>
+<thead>
+<tr>
+  <th>Name</th>
+  <th>Price</th>
+  <th>Unit</th>
+  <th>Total</th>
+  <th>Payment</th>
+  <th>❌</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+
+<hr>
+
+<!-- 🥛 MILK -->
+<h2>🥛 Milk Section</h2>
+
+<input id="milkPrice" type="number" placeholder="Milk Price per Ltr">
+
+<input id="milkQty" type="number" placeholder="Liters">
+
+<!-- GRAM OPTION INSIDE MILK -->
+<select id="milkUnit">
+  <option value="ltr">Liter</option>
+  <option value="100g">100 gm</option>
+  <option value="200g">200 gm</option>
+  <option value="500g">500 gm</option>
+  <option value="1kg">1 kg</option>
+</select>
+
+<select id="milkPayment">
+  <option value="Cash">Cash</option>
+  <option value="bKash">bKash</option>
+</select>
+
+<button onclick="addMilk()">Add Milk</button>
+
+<div class="summary" id="milkTotal">Milk Total: 0</div>
+
+<table>
+<thead>
+<tr>
+  <th>Price</th>
+  <th>Unit</th>
+  <th>Total</th>
+  <th>Payment</th>
+  <th>❌</th>
+</tr>
+</thead>
+<tbody id="milkList"></tbody>
+</table>
+
+<hr>
+
+<!-- HISTORY -->
+<h2>📊 History</h2>
+
+<select id="history" onchange="loadHistory()"></select>
+
+<div class="summary" id="historyTotal"></div>
+
+<table>
+<tbody id="historyList"></tbody>
+</table>
+
+<script>
+
+let allData = JSON.parse(localStorage.getItem("shopHistory")) || {};
+let milkData = JSON.parse(localStorage.getItem("milkHistory")) || {};
+
+function getDate(){
+  let d = new Date();
+  return `${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
+}
+
+let today = getDate();
+document.getElementById("todayDate").innerText = "Today: " + today;
+
+if(!allData[today]) allData[today] = [];
+if(!milkData[today]) milkData[today] = [];
+
+function saveData(){
+  localStorage.setItem("shopHistory", JSON.stringify(allData));
+  localStorage.setItem("milkHistory", JSON.stringify(milkData));
+}
+
+/* 🛒 PRODUCTS */
+function addItem(){
+  let name = document.getElementById("name").value;
+  let price = Number(document.getElementById("price").value);
+  let qty = Number(document.getElementById("qty").value);
+  let unit = document.getElementById("unit").value;
+  let payment = document.getElementById("payment").value;
+
+  if(!name || price<=0 || qty<=0){
+    alert("Enter valid data!");
+    return;
+  }
+
+  let factor = 1;
+  if(unit === "100g") factor = 0.1;
+  if(unit === "200g") factor = 0.2;
+  if(unit === "500g") factor = 0.5;
+  if(unit === "1kg") factor = 1;
+
+  let total = price * qty * factor;
+
+  allData[today].push({name, price, qty, unit, payment, total});
+  saveData();
+
+  render();
+  loadHistoryOptions();
+
+  document.getElementById("name").value="";
+  document.getElementById("price").value="";
+  document.getElementById("qty").value="";
+}
+
+function render(){
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  let total = 0;
+
+  allData[today].forEach((item,i)=>{
+    total += item.total;
+
+    list.innerHTML += `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.price}</td>
+        <td>${item.unit}</td>
+        <td>${item.total}</td>
+        <td>${item.payment}</td>
+        <td><button onclick="deleteItem(${i})">❌</button></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("shopTotal").innerText = "Shop Total: " + total;
+}
+
+function deleteItem(i){
+  allData[today].splice(i,1);
+  saveData();
+  render();
+}
+
+/* 🥛 MILK */
+function addMilk(){
+  let price = Number(document.getElementById("milkPrice").value);
+  let qty = Number(document.getElementById("milkQty").value);
+  let unit = document.getElementById("milkUnit").value;
+  let payment = document.getElementById("milkPayment").value;
+
+  if(!price || !qty || price<=0 || qty<=0){
+    alert("Enter valid milk data!");
+    return;
+  }
+
+  let factor = 1;
+  if(unit === "100g") factor = 0.1;
+  if(unit === "200g") factor = 0.2;
+  if(unit === "500g") factor = 0.5;
+  if(unit === "1kg") factor = 1;
+  if(unit === "ltr") factor = 1;
+
+  let total = price * qty * factor;
+
+  milkData[today].push({price, qty, unit, payment, total});
+  saveData();
+
+  renderMilk();
+
+  document.getElementById("milkPrice").value="";
+  document.getElementById("milkQty").value="";
+}
+
+function renderMilk(){
+  let list = document.getElementById("milkList");
+  list.innerHTML = "";
+
+  let total = 0;
+
+  milkData[today].forEach((item,i)=>{
+    total += item.total;
+
+    list.innerHTML += `
+      <tr>
+        <td>${item.price}</td>
+        <td>${item.unit}</td>
+        <td>${item.total}</td>
+        <td>${item.payment}</td>
+        <td><button onclick="deleteMilk(${i})">❌</button></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("milkTotal").innerText = "Milk Total: " + total;
+}
+
+function deleteMilk(i){
+  milkData[today].splice(i,1);
+  saveData();
+  renderMilk();
+}
+
+/* HISTORY */
+function loadHistoryOptions(){
+  let select = document.getElementById("history");
+  select.innerHTML = "";
+
+  Object.keys(allData).forEach(date=>{
+    let opt = document.createElement("option");
+    opt.value = date;
+    opt.textContent = date;
+    select.appendChild(opt);
+  });
+}
+
+function loadHistory(){
+  let date = document.getElementById("history").value;
+  let list = document.getElementById("historyList");
+
+  list.innerHTML = "";
+  let total = 0;
+
+  if(allData[date]){
+    allData[date].forEach(item=>{
+      total += item.total;
+
+      list.innerHTML += `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.price}</td>
+          <td>${item.unit}</td>
+          <td>${item.total}</td>
+          <td>${item.payment}</td>
+        </tr>
+      `;
+    });
+  }
+
+  if(milkData[date]){
+    milkData[date].forEach(item=>{
+      total += item.total;
+
+      list.innerHTML += `
+        <tr>
+          <td>🥛 Milk</td>
+          <td>${item.price}</td>
+          <td>${item.unit}</td>
+          <td>${item.total}</td>
+          <td>${item.payment}</td>
+        </tr>
+      `;
+    });
+  }
+
+  document.getElementById("historyTotal").innerText =
+    "Total for " + date + ": " + total;
+}
+
+/* INIT */
+render();
+renderMilk();
+loadHistoryOptions();
+
+</script>
+
+</body>
+</html>
